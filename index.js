@@ -8,7 +8,8 @@ module.exports = Client;
 var Duplex = require('stream').Duplex;
 var inherits = require('util').inherits;
 
-function noop() {};
+function noop() {
+};
 
 /**
  * The Client class provides a unified pubsub client in node.js and browsers. It
@@ -46,28 +47,35 @@ function noop() {};
  */
 
 function Client(options, Adapter, transport) {
-  var client = this;
+    var client = this;
 
-  this.options = options || {};
-  var streamOptions = options.stream || {};
-  streamOptions.readableObjectMode = true;
-  streamOptions.writeableObjectMode = true;
+    this.options = options || {};
+    var streamOptions = options.stream || {};
+    streamOptions.readableObjectMode = true;
+    streamOptions.writeableObjectMode = true;
 
-  Duplex.call(this, streamOptions);
+    Duplex.call(this, streamOptions);
 
-  this.state = null;
-  this.transport = transport;
-  this.adapter = new Adapter(this);
-  this.setMaxListeners(0);
-  this.incomingQueue = [];
+    this.state = null;
+    this.transport = transport;
+    var adapter = this.adapter = new Adapter(this);
+    this.setMaxListeners(0);
+    this.incomingQueue = [];
 
-  this.on('message', function(topic, msg, options) {
-    this.incomingQueue.push({
-      topic: topic,
-      payload: msg,
-      options: options
+    if(this.adapter.MixinMethods) {
+        Object.keys(adapter.MixinMethods).forEach(function (name, callback) {
+            console.log(name);//
+            Object.defineProperty(client, 'send', Object.getOwnPropertyDescriptor(adapter.MixinMethods, name));
+        })
+    }
+
+    this.on('message', function (topic, msg, options) {
+        this.incomingQueue.push({
+            topic: topic,
+            payload: msg,
+            options: options
+        });
     });
-  });
 }
 
 inherits(Client, Duplex);
@@ -76,20 +84,20 @@ inherits(Client, Duplex);
  *
  */
 
-Client.prototype._read = function(size) {
-  while(size--) {
-    this.push(this.incomingQueue.shift());
-  }
+Client.prototype._read = function (size) {
+    while (size--) {
+        this.push(this.incomingQueue.shift());
+    }
 }
 
 /*!
  *
  */
 
-Client.prototype._write = function(size) {
-  while(size--) {
-    this.push(this.incomingQueue.shift());
-  }
+Client.prototype._write = function (size) {
+    while (size--) {
+        this.push(this.incomingQueue.shift());
+    }
 }
 
 /**
@@ -99,28 +107,28 @@ Client.prototype._write = function(size) {
  * @param {Error} err A connection error (if one occured).
  */
 
-Client.prototype.connect = function(cb) {
-  var state = this.state;
-  var client = this;
-  cb = cb || noop;
+Client.prototype.connect = function (cb) {
+    var state = this.state;
+    var client = this;
+    cb = cb || noop;
 
-  switch(this.state) {
-    case 'connected':
-    case 'connecting':
-      return process.nextTick(function() {
-        cb(new Error('client is already ' + state));
-      });
-    break;
-    default:
-      this.state = 'connecting';
-      this.adapter.connect(function(err) {
-        if(err) return cb(err);
-        client.state = 'connected';
-        client.emit('connect');
-        cb();
-      });
-    break;
-  }
+    switch (this.state) {
+        case 'connected':
+        case 'connecting':
+            return process.nextTick(function () {
+                cb(new Error('client is already ' + state));
+            });
+            break;
+        default:
+            this.state = 'connecting';
+            this.adapter.connect(function (err) {
+                if (err) return cb(err);
+                client.state = 'connected';
+                client.emit('connect');
+                cb();
+            });
+            break;
+    }
 }
 
 /**
@@ -130,24 +138,24 @@ Client.prototype.connect = function(cb) {
  * @param {Error} err A connection error (if one occured).
  */
 
-Client.prototype.end = function(cb) {
-  var state = this.state;
-  var client = this;
+Client.prototype.end = function (cb) {
+    var state = this.state;
+    var client = this;
 
-  switch(this.state) {
-    case 'connected':
-    case 'connecting':
-      this.state = 'closing';
-      this.adapter.end(function(err) {
-        client.state = 'closed';
-        cb(err);
-      });
-    break;
-    default:
-      // not connected
-      process.nextTick(cb);
-    break;
-  }
+    switch (this.state) {
+        case 'connected':
+        case 'connecting':
+            this.state = 'closing';
+            this.adapter.end(function (err) {
+                client.state = 'closed';
+                cb(err);
+            });
+            break;
+        default:
+            // not connected
+            process.nextTick(cb);
+            break;
+    }
 }
 
 /**
@@ -171,20 +179,20 @@ Client.prototype.end = function(cb) {
  * @param {Error} err An error object is included if an error was supplied by the adapter.
  */
 
-Client.prototype.publish = function(topic, message, options, cb) {
-  var client = this;
+Client.prototype.publish = function (topic, message, options, cb) {
+    var client = this;
 
-  if(typeof options === 'function') {
-    cb = options;
-    options = undefined;
-  }
-  options = options || {};
-  cb = cb || noop;
+    if (typeof options === 'function') {
+        cb = options;
+        options = undefined;
+    }
+    options = options || {};
+    cb = cb || noop;
 
-  this.ready(function(err) {
-    if(err) return cb(err);
-    client.adapter.publish(topic, message, options, cb);
-  });
+    this.ready(function (err) {
+        if (err) return cb(err);
+        client.adapter.publish(topic, message, options, cb);
+    });
 }
 
 /**
@@ -203,20 +211,20 @@ Client.prototype.publish = function(topic, message, options, cb) {
  * @param {Error} err An error object is included if an error was supplied by the adapter.
  */
 
-Client.prototype.subscribe = function(topic, options, cb) {
-  var client = this;
+Client.prototype.subscribe = function (topic, options, cb) {
+    var client = this;
 
-  if(typeof options === 'function') {
-    cb = options;
-    options = undefined;
-  }
-  options = options || {};
-  cb = cb || noop;
+    if (typeof options === 'function') {
+        cb = options;
+        options = undefined;
+    }
+    options = options || {};
+    cb = cb || noop;
 
-  this.ready(function(err) {
-    if(err) return cb(err);
-    client.adapter.subscribe(topic, options, cb);
-  });
+    this.ready(function (err) {
+        if (err) return cb(err);
+        client.adapter.subscribe(topic, options, cb);
+    });
 }
 
 /**
@@ -227,13 +235,13 @@ Client.prototype.subscribe = function(topic, options, cb) {
  * @param {Error} err An error object is included if an error was supplied by the adapter.
  */
 
-Client.prototype.unsubscribe = function(topic, cb) {
-  cb = cb || noop;
-  var client = this;
-  this.ready(function(err) {
-    if(err) return cb(err);
-    client.adapter.unsubscribe(topic, cb);
-  });
+Client.prototype.unsubscribe = function (topic, cb) {
+    cb = cb || noop;
+    var client = this;
+    this.ready(function (err) {
+        if (err) return cb(err);
+        client.adapter.unsubscribe(topic, cb);
+    });
 }
 
 /**
@@ -244,23 +252,26 @@ Client.prototype.unsubscribe = function(topic, cb) {
  * @param {Error} err The connection error (if one occurred).
  */
 
-Client.prototype.ready = function(cb) {
-  var state = this.state;
-  switch(state) {
-    case 'connected':
-      process.nextTick(cb);
-    break;
-    case 'connecting':
-      this.once('connect', function() {
-        cb();
-      });
-    break;
-    case 'closing':
-    case 'closed':
-      return cb(new Error('client is ' + state));
-    break;
-    default:
-      this.connect(cb);
-    break;
-  }
+Client.prototype.ready = function (cb) {
+    var state = this.state;
+    switch (state) {
+        case 'connected':
+            process.nextTick(cb);
+            break;
+        case 'connecting':
+            this.once('connect', function () {
+                cb();
+            });
+            break;
+        case 'closing':
+        case 'closed':
+            return cb(new Error('client is ' + state));
+            break;
+        default:
+            this.connect(cb);
+            break;
+    }
 }
+
+//TODO mix adapter capacity
+
