@@ -64,7 +64,6 @@ function Client(options, Adapter, transport) {
 
     if(this.adapter.MixinMethods) {
         Object.keys(adapter.MixinMethods).forEach(function (name, callback) {
-            console.log(name);//
             Object.defineProperty(client, 'send', Object.getOwnPropertyDescriptor(adapter.MixinMethods, name));
         })
     }
