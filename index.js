@@ -126,6 +126,12 @@ Client.prototype.connect = function (cb) {
                 client.emit('connect');
                 cb();
             });
+            this.adapter.on('ready', function () {
+                client.emit('ready');
+            })
+            this.adapter.on('error', function (error) {
+                client.emit('error', error);
+            })
             break;
     }
 }
